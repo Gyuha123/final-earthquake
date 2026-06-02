@@ -139,22 +139,63 @@ else:
 # -----------------------------
 st.subheader("📊 데이터 시각화")
 
-tab1, tab2, tab3 = st.tabs(["쓰나미 vs 진원깊이", "진원깊이 vs 규모", "쓰나미 vs 규모"])
+tab1, tab2, tab3, tab4 = st.tabs(["🗺️ 지도", "쓰나미 vs 진원깊이", "진원깊이 vs 규모", "쓰나미 vs 규모"])
 
 with tab1:
+    import folium
+    from streamlit_folium import st_folium
+
+    m = folium.Map(location=[0, 0], zoom_start=2)
+
+    folium_colors = {0: 'blue', 1: 'green', 2: 'red'}
+
+    for _, row in df_sample.iterrows():
+        folium.CircleMarker(
+            location=[row['위도'], row['경도']],
+            radius=4,
+            color=folium_colors[row['cluster']],
+            fill=True,
+            fill_color=folium_colors[row['cluster']],
+            fill_opacity=0.7,
+            tooltip=f"군집: {row['cluster']} ({risk_dict[row['cluster']]})<br>규모: {row['규모']}<br>깊이: {row['진원깊이']}km"
+        ).add_to(m)
+
+    # 사용자 입력 위치 별표 표시
+    if main_cluster is not None:
+        folium.Marker(
+            location=[lat, lon],
+            icon=folium.Icon(color='black', icon='star'),
+            tooltip=f"입력 위치\n위험도: {risk_dict[main_cluster]}"
+        ).add_to(m)
+
+    # 범례
+    legend_html = """
+    <div style="position: fixed; bottom: 30px; left: 30px; z-index: 1000;
+                background-color: white; padding: 10px; border-radius: 8px;
+                border: 2px solid grey; font-size: 13px;">
+        <b>군집 범례</b><br>
+        <span style="color:blue;">●</span> 군집0 - 위험 낮음<br>
+        <span style="color:green;">●</span> 군집1 - 위험 중간<br>
+        <span style="color:red;">●</span> 군집2 - 위험 높음<br>
+        ★ 입력 위치
+    </div>
+    """
+    m.get_root().html.add_child(folium.Element(legend_html))
+
+    st_folium(m, width=1000, height=500)
+
+with tab2:
     fig, ax = plt.subplots(figsize=(10, 6))
     for c, color in color_dict.items():
         sub = df_sample[df_sample['cluster'] == c]
         ax.scatter(sub['쓰나미여부'], sub['진원깊이'], c=color, label=f"군집{c}({risk_dict[c]})", alpha=0.6, s=20)
-    if main_cluster is not None:
-        ax.scatter(0, 10, c='black', s=0)  # dummy for spacing
     ax.set_xlabel("쓰나미 여부")
     ax.set_ylabel("진원깊이")
     ax.set_title("세계 지진 분석")
     ax.legend()
     st.pyplot(fig)
 
-with tab2:
+with tab3:
     fig, ax = plt.subplots(figsize=(10, 6))
     for c, color in color_dict.items():
         sub = df_sample[df_sample['cluster'] == c]
@@ -165,7 +206,7 @@ with tab2:
     ax.legend()
     st.pyplot(fig)
 
-with tab3:
+with tab4:
     fig, ax = plt.subplots(figsize=(10, 6))
     for c, color in color_dict.items():
         sub = df_sample[df_sample['cluster'] == c]
